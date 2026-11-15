@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Cloud backup for Masala Pour.
+// Each phone has one document at players/{key}, where key is a SHA-256 hash
+// (64 hex chars) of a phone id that survives reinstalls. Players sign in
+// anonymously; the anonymous uid can change after a reinstall, so access is
+// by the unguessable key, and listing the collection is not allowed.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /players/{key} {
+      allow get: if request.auth != null && key.size() == 64;
+
+      allow create, update: if request.auth != null
+        && key.size() == 64
+        && request.resource.data.keys().hasOnly(
+             ['save', 'level', 'coins', 'platform', 'uid', 'updatedAt'])
+        && request.resource.data.save is map
+        && request.resource.data.save.size() < 600
+        && request.resource.data.level is int
+        && request.resource.data.level >= 1
+        && request.resource.data.level <= 100000
+        && request.resource.data.coins is int
+        && request.resource.data.coins >= 0
+        && request.resource.data.coins <= 10000000
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+
+      allow list, delete: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

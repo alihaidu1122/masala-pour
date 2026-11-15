@@ -56,6 +56,38 @@ class SaveService {
 
   static SharedPreferences get _p => _prefs!;
 
+  /// Called after any saved value changes (used to schedule cloud backup).
+  static void Function()? onChanged;
+
+  static void _changed() => onChanged?.call();
+
+  /// Every saved value, for cloud backup.
+  Map<String, Object> exportSnapshot() => {
+    for (final key in _p.getKeys())
+      if (_p.get(key) case final Object value) key: value,
+  };
+
+  /// Replaces saved values with [snapshot] (after a cloud restore).
+  Future<void> importSnapshot(Map<String, Object> snapshot) async {
+    for (final entry in snapshot.entries) {
+      final v = entry.value;
+      switch (v) {
+        case final int i:
+          await _p.setInt(entry.key, i);
+        case final bool b:
+          await _p.setBool(entry.key, b);
+        case final double d:
+          await _p.setDouble(entry.key, d);
+        case final String str:
+          await _p.setString(entry.key, str);
+        case final List<String> list:
+          await _p.setStringList(entry.key, list);
+        case final List<dynamic> list:
+          await _p.setStringList(entry.key, [for (final e in list) '$e']);
+      }
+    }
+  }
+
   // ── Current level ──────────────────────────────────────────────────────────
 
   /// The 1-based id of the highest level the player has reached.
@@ -65,6 +97,7 @@ class SaveService {
   Future<void> advanceLevel(int id) async {
     if (id > currentLevel) {
       await _p.setInt(_Keys.currentLevel, id);
+      _changed();
     }
   }
 
@@ -88,6 +121,7 @@ class SaveService {
     if (stars > current) {
       map['$id'] = stars;
       await _p.setString(_Keys.starsMap, jsonEncode(map));
+      _changed();
     }
   }
 
@@ -101,11 +135,13 @@ class SaveService {
   Future<void> incrementRestarts(int levelId) async {
     final key = '${_Keys.restartCountPrefix}$levelId';
     await _p.setInt(key, (_p.getInt(key) ?? 0) + 1);
+    _changed();
   }
 
   /// Resets the restart counter when the player completes a level.
   Future<void> clearRestarts(int levelId) async {
     await _p.remove('${_Keys.restartCountPrefix}$levelId');
+    _changed();
   }
 
   // ── Undo counters ──────────────────────────────────────────────────────────
@@ -116,6 +152,7 @@ class SaveService {
   /// Increments the lifetime count of undos used.
   Future<void> recordUndoUsed() async {
     await _p.setInt(_Keys.undosUsed, totalUndosUsed + 1);
+    _changed();
   }
 
   /// Remaining undos saved for a specific [levelId], if any.
@@ -125,11 +162,13 @@ class SaveService {
   /// Saves the remaining undos count for [levelId].
   Future<void> saveUndos(int levelId, int undosLeft) async {
     await _p.setInt('${_Keys.levelUndosPrefix}$levelId', undosLeft);
+    _changed();
   }
 
   /// Clears saved undos when a level completes or restarts.
   Future<void> clearSavedUndos(int levelId) async {
     await _p.remove('${_Keys.levelUndosPrefix}$levelId');
+    _changed();
   }
 
   // ── Settings persistence ───────────────────────────────────────────────────
@@ -148,10 +187,15 @@ class SaveService {
   /// Persists [settings] to storage.
   Future<void> saveSettings(SettingsModel settings) async {
     await _p.setBool(_Keys.soundOn, settings.soundOn);
+    _changed();
     await _p.setBool(_Keys.musicOn, settings.musicOn);
+    _changed();
     await _p.setBool(_Keys.vibrationOn, settings.vibrationOn);
+    _changed();
     await _p.setBool(_Keys.colorBlindMode, settings.colorBlindMode);
+    _changed();
     await _p.setBool(_Keys.fastAnimations, settings.fastAnimations);
+    _changed();
   }
 
   // ── Remove-ads flag ────────────────────────────────────────────────────────
@@ -160,6 +204,7 @@ class SaveService {
 
   Future<void> setAdsRemoved() async {
     await _p.setBool(_Keys.removeAds, true);
+    _changed();
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
@@ -169,7 +214,9 @@ class SaveService {
 
   Future<void> recordLevelComplete({required int moves}) async {
     await _p.setInt(_Keys.gamesPlayed, gamesPlayed + 1);
+    _changed();
     await _p.setInt(_Keys.totalMoves, totalMoves + moves);
+    _changed();
   }
 
   // ── Daily challenge ────────────────────────────────────────────────────────
@@ -186,6 +233,7 @@ class SaveService {
   Future<void> markDailyCompleted(String dateKey) async {
     final set = completedDailyDates..add(dateKey);
     await _p.setStringList(_Keys.dailyCompleted, set.toList()..sort());
+    _changed();
   }
 
   // ── Coins & rewards ────────────────────────────────────────────────────────
@@ -196,6 +244,7 @@ class SaveService {
   /// Sets the coin balance (never below zero).
   Future<void> setCoins(int value) async {
     await _p.setInt(_Keys.coins, value < 0 ? 0 : value);
+    _changed();
   }
 
   /// Date of the last claimed login reward, or null.
@@ -211,7 +260,9 @@ class SaveService {
   Future<void> recordLoginClaim(DateTime date, int day) async {
     final d = DateTime(date.year, date.month, date.day);
     await _p.setString(_Keys.loginLastClaim, d.toIso8601String());
+    _changed();
     await _p.setInt(_Keys.loginDay, day);
+    _changed();
   }
 
   /// Chapter indexes whose chest was already opened.
@@ -226,6 +277,7 @@ class SaveService {
     await _p.setStringList(_Keys.chestsClaimed, [
       for (final c in set.toList()..sort()) '$c',
     ]);
+    _changed();
   }
 
   /// Whether Daily Challenge coins were already paid for [dateKey].
@@ -236,5 +288,6 @@ class SaveService {
   Future<void> markDailyCoinsPaid(String dateKey) async {
     final list = [...?_p.getStringList(_Keys.dailyCoinsDates), dateKey];
     await _p.setStringList(_Keys.dailyCoinsDates, list);
+    _changed();
   }
 }

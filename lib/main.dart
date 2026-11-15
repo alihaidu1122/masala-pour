@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/ads/ad_service.dart';
 import 'core/ads/consent_service.dart';
 import 'core/audio/sound_service.dart';
+import 'core/cloud/cloud_save_service.dart';
 import 'core/remote_config/remote_config_service.dart';
 import 'core/storage/save_service.dart';
 
@@ -20,6 +21,14 @@ Future<void> main() async {
   ]);
 
   await SaveService.init();
+
+  // Restore this phone's cloud backup before the UI reads the save. Capped so
+  // a slow or missing network never blocks the launch for long; uploads only
+  // start once the backup has been checked.
+  await CloudSaveService.instance.startAndRestore().timeout(
+    const Duration(seconds: 4),
+    onTimeout: () => false,
+  );
 
   final remoteConfig = RemoteConfigService();
   await remoteConfig.fetch();
