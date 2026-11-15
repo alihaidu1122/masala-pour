@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "865329651623",
+    "project_id": "masala-pour-game",
+    "storage_bucket": "masala-pour-game.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865329651623:android:64878e456f40bf554c2082",
+        "android_client_info": {
+          "package_name": "com.masalapour.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrHENHK4RNSm86eEq68PN_KsraODKnNjk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
