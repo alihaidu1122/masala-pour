@@ -96,6 +96,7 @@ class SortGame extends FlameGame {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
+    wake();
     _background.size = size.clone();
     final changed =
         _layoutSize == null ||
@@ -110,6 +111,7 @@ class SortGame extends FlameGame {
 
   /// Called by the Flutter widget whenever [GameState.board] changes.
   void syncBoard(BoardState board) {
+    wake();
     final jarCountChanged = board.jarCount != _builtForJarCount;
     _lastBoard = board;
 
@@ -132,6 +134,7 @@ class SortGame extends FlameGame {
     if (speed != null) speedFactor = speed;
     if (sound != null) soundService = sound;
     if (haptics != null) hapticsService = haptics;
+    wake();
     for (final j in _jars) {
       j.colorBlindMode = colorBlindMode;
     }
@@ -211,6 +214,7 @@ class SortGame extends FlameGame {
   // ── Tap input ─────────────────────────────────────────────────────────────
 
   void _handleTap(int index) {
+    wake();
     if (_anim != null) return;
 
     hapticsService?.tap();
@@ -235,6 +239,7 @@ class SortGame extends FlameGame {
   // ── Drag & Drop input ─────────────────────────────────────────────────────
 
   void _handleDragStart(int index, Vector2 startPos) {
+    wake();
     if (_anim != null) return;
     hapticsService?.tap();
     if (controller.snapshot.selectedJar != null &&
@@ -367,6 +372,35 @@ class SortGame extends FlameGame {
   void update(double dt) {
     super.update(dt);
     _tickAnim(dt);
+    _checkIdle(dt);
+  }
+
+  // ── Battery: stop drawing when nothing moves ──────────────────────────────
+
+  double _idleFor = 0;
+
+  void _checkIdle(double dt) {
+    final busy =
+        _anim != null ||
+        _jars.any((j) => j.isBusy) ||
+        children.any(
+          (c) =>
+              c is ParticleSystemComponent ||
+              c is TimerComponent ||
+              c is PourStreamComponent,
+        );
+    if (busy) {
+      _idleFor = 0;
+      return;
+    }
+    _idleFor += dt;
+    if (_idleFor > 1.2 && !paused) pauseEngine();
+  }
+
+  /// Resumes drawing (call on any input or board change).
+  void wake() {
+    _idleFor = 0;
+    if (paused) resumeEngine();
   }
 
   void _tickAnim(double dt) {

@@ -38,14 +38,36 @@ class AdService {
 
   ConsentService get consent => _consent;
 
+  bool _muted = !SaveServiceSound.soundOn;
+
+  /// Mutes ad audio (follows the game's sound setting).
+  Future<void> setMuted(bool muted) async {
+    _muted = muted;
+    if (!_initialized) return;
+    try {
+      await MobileAds.instance.setAppMuted(muted);
+      await MobileAds.instance.setAppVolume(muted ? 0 : 1);
+    } catch (e) {
+      debugPrint('AdService mute failed: $e');
+    }
+  }
+
   /// Initializes Mobile Ads after consent, then preloads one of each ad.
   Future<void> initialize() async {
     if (_initialized) return;
     try {
       await _consent.gatherConsent();
       await MobileAds.instance.initialize();
+      // Family-safe ads only (no mature / suggestive content).
+      await MobileAds.instance.updateRequestConfiguration(
+        RequestConfiguration(maxAdContentRating: MaxAdContentRating.pg),
+      );
       _initialized = true;
-      await Future.wait([_loadRewarded(), _loadInterstitial()]);
+      await setMuted(_muted);
+      await Future.wait([
+        _loadRewarded(),
+        if (AdsConfig.interstitialsEnabled) _loadInterstitial(),
+      ]);
     } catch (e) {
       debugPrint('AdService init failed: $e');
     }
@@ -90,6 +112,14 @@ class AdService {
     );
     return completer.future;
   }
+
+  /// Starts loading a rewarded video if none is ready.
+  Future<void> preloadRewarded() async {
+    if (_rewarded == null && _initialized) await _loadRewarded();
+  }
+
+  /// Whether a rewarded video is loaded and ready to show.
+  bool get isRewardedReady => _rewarded != null;
 
   /// Shows a rewarded ad. Returns true only if the user earned the reward.
   Future<bool> showRewarded(String placement) async {
@@ -137,6 +167,7 @@ class AdService {
   Future<bool> maybeShowInterstitialAfterWin({
     required int completedLevelId,
   }) async {
+    if (!AdsConfig.interstitialsEnabled) return false;
     final adsRemoved = SaveService.instance.adsRemoved;
     final elapsed = _lastInterstitialAt == null
         ? null
@@ -181,3 +212,14 @@ class AdService {
 
 /// App-wide [AdService]. Prefer overriding in [main] after [AdService.initialize].
 final adServiceProvider = Provider<AdService>((ref) => AdService());
+
+/// Reads the saved sound flag without depending on the settings layer.
+abstract final class SaveServiceSound {
+  static bool get soundOn {
+    try {
+      return SaveService.instance.loadSettings().soundOn;
+    } catch (_) {
+      return true;
+    }
+  }
+}

@@ -5,7 +5,6 @@ abstract final class AssetPaths {
   static const String _root = 'assets/images';
 
   static const String appLogo = '$_root/app_logo.png';
-  static const String appIcon = '$_root/app_icon.png';
   static const String play = '$_root/btn_play.png';
   static const String restart = '$_root/btn_restart.png';
   static const String undo = '$_root/btn_undo.png';

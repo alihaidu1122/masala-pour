@@ -10,6 +10,10 @@ class AdsConfig {
   /// Google sample AdMob **app** id (Android). Replace for release.
   static const String androidAppId = 'ca-app-pub-3940256099942544~3347511713';
 
+  /// Forced between-level (interstitial) ads. Off by design: the only ads in
+  /// the game are optional videos the player chooses for a helper.
+  static const bool interstitialsEnabled = false;
+
   /// No interstitial ads before this level (1-based).
   static const int interstitialStartLevel = 10;
 

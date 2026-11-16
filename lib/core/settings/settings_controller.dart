@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ads/ad_service.dart';
 import '../storage/save_service.dart';
 import 'settings_model.dart';
 
@@ -16,6 +17,8 @@ class SettingsController extends Notifier<SettingsModel> {
   Future<void> setSound(bool value) async {
     state = state.copyWith(soundOn: value);
     await SaveService.instance.saveSettings(state);
+    // Ads follow the game's sound switch.
+    await ref.read(adServiceProvider).setMuted(!value);
   }
 
   /// Sets background music toggle and persists it.

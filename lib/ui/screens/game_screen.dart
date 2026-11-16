@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +47,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _stuckShown = false;
   bool _showTutorial = false;
   bool _introDismissed = false;
+
+  /// One free helper per level when no ad video is available.
+  bool _freeHelperUsed = false;
   DateTime? _startedAt;
 
   @override
@@ -115,6 +120,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       final ok = await ref.read(walletProvider.notifier).trySpend(price);
       if (ok) ref.read(soundServiceProvider).playComplete();
       return ok;
+    }
+    if (!ref.read(adServiceProvider).isRewardedReady) {
+      // No video to show: never leave the player stuck. The first time per
+      // level the helper is free; after that we suggest coins.
+      unawaited(ref.read(adServiceProvider).preloadRewarded());
+      final messenger = ScaffoldMessenger.of(context);
+      if (!_freeHelperUsed) {
+        _freeHelperUsed = true;
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('No video available right now, this one is free!'),
+          ),
+        );
+        return true;
+      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('No video right now. Try again soon or use coins.'),
+        ),
+      );
+      return false;
     }
     return _watchRewarded(placement);
   }

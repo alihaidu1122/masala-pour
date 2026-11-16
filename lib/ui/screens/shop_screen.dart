@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/asset_paths.dart';
-import '../../core/iap/purchase_service.dart';
-import '../../core/storage/save_service.dart';
 import '../widgets/asset_icon.dart';
 import '../widgets/game_ui.dart';
 import '../widgets/coin_widgets.dart';
@@ -12,18 +10,15 @@ import '../../core/rewards/reward_rules.dart';
 import '../../core/ads/ad_service.dart';
 import '../../config/game_config.dart';
 
-/// Shop: Remove Ads + Restore Purchases.
+/// Shop: coins, free coins for an optional video, and helper prices.
+///
+/// The Remove Ads purchase is hidden for now: the game has no forced ads.
 class ShopScreen extends ConsumerWidget {
   /// Creates the shop screen.
   const ShopScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(purchaseServiceProvider);
-    final purchase = ref.read(purchaseServiceProvider.notifier);
-    final adsRemoved =
-        SaveService.instance.adsRemoved || status == ShopPurchaseState.owned;
-
     return GameBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -36,58 +31,12 @@ class ShopScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: [
             const _CoinsSection(),
-            const SizedBox(height: 28),
-            const AssetIcon(AssetPaths.shop, size: 72),
-            const SizedBox(height: 16),
-            Text(
-              'Remove Ads',
+            const SizedBox(height: 18),
+            const Text(
+              'No forced ads: videos only play when you choose one for a '
+              'helper or free coins.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              adsRemoved
-                  ? 'Thanks! Interstitial ads are off. Rewarded helpers stay available.'
-                  : 'One-time purchase. Removes interstitial ads forever. '
-                        'Rewarded ads for Undo / +1 Jar / Skip stay available.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            if (adsRemoved)
-              const ListTile(
-                leading: Icon(Icons.check_circle, color: Colors.green),
-                title: Text('Remove Ads — Owned'),
-              )
-            else ...[
-              FilledButton(
-                onPressed: status == ShopPurchaseState.ready
-                    ? () => purchase.buyRemoveAds()
-                    : null,
-                child: Text(
-                  status == ShopPurchaseState.pending
-                      ? 'Processing…'
-                      : status == ShopPurchaseState.loading
-                      ? 'Loading…'
-                      : status == ShopPurchaseState.unavailable
-                      ? 'Store unavailable'
-                      : 'Buy${purchase.priceLabel != null ? ' · ${purchase.priceLabel}' : ''}',
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: status == ShopPurchaseState.pending
-                    ? null
-                    : () => purchase.restore(),
-                child: const Text('Restore Purchases'),
-              ),
-            ],
-            const SizedBox(height: 24),
-            Text(
-              'Product id: remove_ads — create it in Play Console for test buys.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: TextStyle(color: GameConfig.textMuted, fontSize: 13),
             ),
           ],
         ),

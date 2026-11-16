@@ -291,6 +291,25 @@ class JarComponent extends PositionComponent with TapCallbacks, DragCallbacks {
     if (!_isDragging && !_isReturning) position.setFrom(home);
   }
 
+  /// Whether this jar is mid-animation (used to pause drawing when idle).
+  bool get isBusy {
+    final targetLift = (isSelected || _isDragging) ? _h * 0.13 : 0.0;
+    final glowTarget = (isSelected || _isDragging || isHovered) ? 1.0 : 0.0;
+    return _introT < 1 ||
+        (_lift - targetLift).abs() > 0.3 ||
+        _liftVel.abs() > 1 ||
+        (_glow - glowTarget).abs() > 0.02 ||
+        (_jar.isComplete && _capT < 1) ||
+        _popT < 1 ||
+        _bumpT < 1 ||
+        _hopT < 1 ||
+        _shaking ||
+        _isReturning ||
+        _isDragging ||
+        _revealT < 1 ||
+        _unlockT < 1;
+  }
+
   // ── Update ────────────────────────────────────────────────────────────────
 
   @override
